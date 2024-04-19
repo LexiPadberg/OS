@@ -1,0 +1,91 @@
+
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+
+#define MAX_LINE 80 /* 80 chars per line, per command */
+#define BUFFER_SIZE 25
+#define READ_END 0
+#define WRITE_END 1
+
+
+int main() {
+    pid_t pid;
+    char* args[MAX_LINE / 2 + 1];	/* command line (of 80) has max of 40 arguments */
+    int should_run = 1;
+
+ 
+    while (should_run) {
+        printf("osh>");
+        fflush(stdout);
+
+        //read and store user input into the input character
+        char input[MAX_LINE];
+        fgets(input, sizeof(input), stdin);
+
+        // inititialize acc for num of arguments
+        int numArgs = 0;
+        char* token = strtok(input, "  \n");
+        //if (strcmp(token, "&") == 0) {
+
+        //put tokens into arguments 
+        while (token != NULL) {
+            args[numArgs++] = strdup(token);
+            //find duplicate and store the pointer in args
+            token = strtok(NULL, " \n");
+            // Move to the next token in the string
+        }
+
+        args[numArgs] = NULL; // set last element to null
+
+        // check for background 
+        int background = 0;
+        if (numArgs > 0 && strcmp(args[numArgs - 1], "&") == 0) {
+            args[numArgs - 1] = NULL; // remove the "&" from arguments
+            // set background to 1 to shouw the command is running in 
+            // backgroung
+            background = 1;
+
+        }
+
+
+        /* fork a child process */
+        pid = fork();
+
+
+        if (pid < 0) { /* error occurred */
+            fprintf(stderr, "Fork Failed");
+            exit(EXIT_FAILURE);
+        }
+        else if (pid == 0) {
+            /* child process */
+
+            execvp(args[0], args);
+
+            exit(EXIT_FAILURE);
+
+        }
+        else { /* parent process */
+            /* parent will wait for the child to complete */
+            if (!background) {
+                //if background = 0 no child process is running
+                wait(NULL);
+                printf("Child has finished running \n");
+            }
+            else {
+                // if background is not 0, then the child process is running
+                printf("Child is running in the background \n");
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+
